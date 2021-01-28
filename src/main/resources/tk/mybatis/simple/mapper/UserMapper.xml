@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="tk.mybatis.simple.mapper.UserMapper">
+
+    <resultMap id="userMap" type="SysUser">
+        <id property="id" column="id"/>
+        <result property="userName" column="user_name"/>
+        <result property="userPassword" column="user_password"/>
+        <result property="userEmail" column="user_email"/>
+        <result property="userInfo" column="user_info"/>
+        <result property="headImg" column="head_img" jdbcType="BLOB"/>
+        <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <resultMap id="userRoleMap" type="SysUser" extends="userMap">
+        <collection property="roleList" resultMap="tk.mybatis.simple.mapper.RoleMapper.rolePrivilegeMap"
+                     columnPrefix="role_"/>
+    </resultMap>
+
+    <resultMap id="userRoleListMapSelect" type="SysUser" extends="userMap">
+        <collection property="roleList" column="{userId = id}"
+                    select="tk.mybatis.simple.mapper.RoleMapper.selectRoleByUserId"
+                    fetchType="lazy"/>
+    </resultMap>
+
+    <select id="selectById" resultMap="userMap">
+        select * from sys_user where id = #{id}
+    </select>
+
+    <select id="selectAll" resultMap="userMap">
+        select id,
+            user_name,
+            user_password,
+            user_email,
+            user_info,
+            head_img,
+            create_time
+        from sys_user
+    </select>
+
+    <select id="selectRolesByUserId" resultType="SysRole">
+        select
+            r.id,
+            r.role_name,
+            r.enabled,
+            r.create_by,
+            r.create_time
+        from sys_user u
+        inner join sys_user_role ur on ur.user_id = u.id
+        inner join sys_role r on r.id = ur.role_id
+        where u.id = #{userId}
+    </select>
+
+    <select id="selectUserAndRoleById" resultMap="userRoleMap">
+        select
+            u.id,
+            u.user_name,
+            u.user_password,
+            u.user_email,
+            u.user_info,
+            u.head_img,
+            u.create_time,
+            ur.role_id
+        from sys_user u
+        inner join sys_user_role ur on u.id = ur.user_id
+        where u.id = #{id}
+    </select>
+
+    <select id="selectAllUserAndRoles" resultMap="userRoleMap">
+        select
+            u.id,
+            u.user_name,
+            u.user_password,
+            u.user_email,
+            u.user_info,
+            u.head_img,
+            u.create_time,
+            r.id role_id,
+            r.role_name role_role_name,
+            r.enabled role_enabled,
+            r.create_by role_created_by,
+            r.create_time role_create_time,
+            p.id role_privilege_id,
+            p.privilege_name role_privilege_privilege_name,
+            p.privilege_url role_privilege_privilege_url
+        from sys_user u
+        inner join sys_user_role ur on ur.user_id = u.id
+        inner join sys_role r on r.id = ur.role_id
+        inner join sys_role_privilege rp on rp.role_id = r.id
+        inner join sys_privilege p on p.id = rp.privilege_id
+    </select>
+
+    <select id="selectAllUserAndRolesSelect" resultMap="userRoleListMapSelect">
+        select
+            u.id,
+            u.user_name,
+            u.user_password,
+            u.user_email,
+            u.user_info,
+            u.head_img,
+            u.create_time
+        from sys_user u
+        where id = #{id}
+    </select>
+
+    <select id="selectUserById" statementType="CALLABLE" useCache="false">
+        {call select_user_by_id(
+            #{id, mode=IN},
+            #{userName, mode=OUT, jdbcType=VARCHAR},
+            #{userPassword, mode=OUT, jdbcType=VARCHAR},
+            #{userEmail, mode=OUT, jdbcType=VARCHAR},
+            #{userInfo, mode=OUT, jdbcType=VARCHAR},
+            #{headImg, mode=OUT, jdbcType=BLOB, javaType=_byte[]},
+            #{createTime, mode=OUT, jdbcType=TIMESTAMP}
+        )}
+    </select>
+
+    <select id="selectUserPage" useCache="false" statementType="CALLABLE" resultMap="userMap">
+        {call select_user_page(
+            #{userName, mode=IN},
+            #{offset, mode=IN},
+            #{limit, mode=IN},
+            #{total, mode=OUT, jdbcType=BIGINT}
+        )}
+    </select>
+
+    <insert id="insertUserAndRoles" statementType="CALLABLE">
+        {call insert_user_and_roles(
+            #{user.id, mode=OUT, jdbcType=BIGINT},
+            #{user.userName, mode=IN},
+            #{user.userPassword, mode=IN},
+            #{user.userEmail, mode=IN},
+            #{user.userInfo, mode=IN},
+            #{user.headImg, mode=IN, jdbcType=BLOB},
+            #{user.createTime, mode=OUT, jdbcType=TIMESTAMP},
+            #{roleIds, mode=IN}
+        )}
+    </insert>
+
+    <delete id="deleteUserById" statementType="CALLABLE">
+        {call delete_user_by_id(#{userId, mode=IN})}
+    </delete>
+
+</mapper>
